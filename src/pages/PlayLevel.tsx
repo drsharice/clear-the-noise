@@ -1,8 +1,11 @@
+// src/pages/PlayLevel.tsx
 import { useMemo, useState } from "react";
 import { Link, useParams, Navigate } from "react-router-dom";
 import { CERTS } from "../data/certs";
 import { scoreSelection } from "../game/scoring";
 import KeywordTiles from "../components/game/KeywordTiles";
+
+type KeywordStatus = "off" | "selected" | "correct" | "wrong" | "missed";
 
 export default function PlayLevel() {
   const { certId } = useParams();
@@ -10,8 +13,9 @@ export default function PlayLevel() {
 
   if (!cert || !cert.enabled) return <Navigate to="/" replace />;
 
-  // For now: always use the first pack + first question (we’ll add pack/level selectors next)
-  const pack = cert.packs[0];
+  const pack = cert.packs?.[0];
+  if (!pack) return <Navigate to={`/cert/${cert.id}`} replace />;
+
   const [qIndex, setQIndex] = useState(0);
   const q = pack.questions[qIndex];
 
@@ -28,8 +32,40 @@ export default function PlayLevel() {
     [selectedIds, q.requiredKeywordIds, q.noiseKeywordIds]
   );
 
+  // ✅ Status map drives ALL tile visuals (pre-check + post-check)
+  const statusById: Record<string, KeywordStatus> = useMemo(() => {
+    const map: Record<string, KeywordStatus> = {};
+
+    // default everything off
+    for (const kw of q.keywords) map[kw.id] = "off";
+
+    const selected = new Set(selectedIds);
+    const required = new Set(q.requiredKeywordIds);
+
+    if (!showResult) {
+      // pre-check: selected = blue
+      for (const id of selected) map[id] = "selected";
+      return map;
+    }
+
+    // post-check:
+    // required -> correct if selected, missed if not
+    for (const id of required) {
+      map[id] = selected.has(id) ? "correct" : "missed";
+    }
+
+    // anything selected that is not required -> wrong
+    for (const id of selected) {
+      if (!required.has(id)) map[id] = "wrong";
+    }
+
+    return map;
+  }, [q.keywords, q.requiredKeywordIds, selectedIds, showResult]);
+
   function toggle(id: string) {
-    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
   }
 
   function submit() {
@@ -43,16 +79,22 @@ export default function PlayLevel() {
   }
 
   const correctAnswer =
-  q.answers.find((a: { id: "A" | "B" | "C" | "D"; text: string }) => a.id === q.correctAnswerId)
-    ?.text ?? "";
+    q.answers.find((a) => a.id === q.correctAnswerId)?.text ?? "";
 
+  const pickedWrong = showResult && selectedIds.some((id) => statusById[id] === "wrong");
+  const allRequiredSelected =
+    showResult && q.requiredKeywordIds.every((id) => statusById[id] === "correct");
 
   return (
     <div className="min-h-screen bg-[var(--ctn-bg)] text-[var(--ctn-text)]">
       <header className="mx-auto max-w-5xl px-6 pt-10 pb-6">
-        <Link to={`/cert/${cert.id}`} className="text-sm text-[var(--ctn-muted)] hover:text-white">
+        <Link
+          to={`/cert/${cert.id}`}
+          className="text-sm text-[var(--ctn-muted)] hover:text-white"
+        >
           ← Back to {cert.label}
         </Link>
+
         <div className="mt-3 flex items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold">Level 1: Find the Signal</h1>
@@ -61,7 +103,7 @@ export default function PlayLevel() {
 
           <div className="rounded-2xl border border-[var(--ctn-border)] bg-[var(--ctn-surface)] px-4 py-3 text-sm">
             <div className="text-[var(--ctn-muted)]">Score</div>
-            <div className="text-lg font-semibold text-[var(--ctn-text)]">{score.total}</div>
+            <div className="text-lg font-semibold">{score.total}</div>
           </div>
         </div>
       </header>
@@ -75,15 +117,23 @@ export default function PlayLevel() {
           <div className="mt-3 text-lg font-semibold">{q.stem}</div>
 
           <div className="mt-4 rounded-2xl border border-[var(--ctn-border)] bg-white/5 p-4">
-            <div className="text-xs text-[var(--ctn-muted)]">Correct answer (shown in Level 1)</div>
-            <div className="mt-1 text-[var(--ctn-text)]">{correctAnswer}</div>
+            <div className="text-xs text-[var(--ctn-muted)]">
+              Correct answer (shown in Level 1)
+            </div>
+            <div className="mt-1">{correctAnswer}</div>
           </div>
 
           <div className="mt-6">
             <div className="mb-2 text-sm text-[var(--ctn-muted)]">
-              Tap the keywords that justify the answer:
+              Select the minimum keywords that prove the shown answer is correct:
             </div>
-            <KeywordTiles keywords={q.keywords} selectedIds={selectedIds} onToggle={toggle} />
+
+            <KeywordTiles
+              keywords={q.keywords}
+              statusById={statusById}
+              onToggle={toggle}
+              locked={showResult}
+            />
           </div>
 
           <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
@@ -112,10 +162,28 @@ export default function PlayLevel() {
 
           {showResult && (
             <div className="mt-5 rounded-2xl border border-[var(--ctn-border)] bg-white/5 p-4 text-sm">
-              <div className="flex flex-wrap gap-x-6 gap-y-1 text-[var(--ctn-muted)]">
-                <div>Gained: <span className="text-white">{score.gained}</span></div>
-                <div>Lost: <span className="text-white">{score.lost}</span></div>
-                <div>Bonus: <span className="text-white">{score.precisionBonus}</span></div>
+              <div className="flex flex-wrap gap-x-6 gap-y-2">
+                <div>
+                  Gained: <span className="text-white">{score.gained}</span>
+                </div>
+                <div>
+                  Lost: <span className="text-white">{score.lost}</span>
+                </div>
+                <div>
+                  Bonus: <span className="text-white">{score.precisionBonus}</span>
+                </div>
+              </div>
+
+              <div className="mt-3">
+                {pickedWrong ? (
+                  <span className="text-red-300">You selected some noise words.</span>
+                ) : allRequiredSelected ? (
+                  <span className="text-[var(--ctn-good)]">Clean selection.</span>
+                ) : (
+                  <span className="text-[var(--ctn-muted)]">
+                    Review the highlighted keywords.
+                  </span>
+                )}
               </div>
             </div>
           )}
