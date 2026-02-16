@@ -1,6 +1,5 @@
-// src/pages/PlayLevel.tsx
-import { useMemo, useState } from "react";
-import { Link, useParams, Navigate } from "react-router-dom";
+import { useMemo, useState, useEffect } from "react";
+import { Link, useParams, Navigate, useSearchParams } from "react-router-dom";
 import { CERTS } from "../data/certs";
 import { scoreSelection } from "../game/scoring";
 import KeywordTiles from "../components/game/KeywordTiles";
@@ -9,12 +8,27 @@ type KeywordStatus = "off" | "selected" | "correct" | "wrong" | "missed";
 
 export default function PlayLevel() {
   const { certId } = useParams();
-  const cert = useMemo(() => CERTS.find((c) => c.id === certId), [certId]);
+  const [searchParams] = useSearchParams();
 
+  const cert = useMemo(() => CERTS.find((c) => c.id === certId), [certId]);
   if (!cert || !cert.enabled) return <Navigate to="/" replace />;
 
-  const pack = cert.packs?.[0];
+  const requestedPackId = searchParams.get("pack");
+
+  const pack = useMemo(() => {
+    if (!cert.packs?.length) return undefined;
+    if (!requestedPackId) return cert.packs[0];
+    return cert.packs.find((p) => p.id === requestedPackId) ?? cert.packs[0];
+  }, [cert.packs, requestedPackId]);
+
   if (!pack) return <Navigate to={`/cert/${cert.id}`} replace />;
+
+  // ✅ Reset quiz state if pack changes
+  useEffect(() => {
+    setQIndex(0);
+    setSelectedIds([]);
+    setShowResult(false);
+  }, [pack.id]);
 
   const [qIndex, setQIndex] = useState(0);
   const q = pack.questions[qIndex];
@@ -32,29 +46,23 @@ export default function PlayLevel() {
     [selectedIds, q.requiredKeywordIds, q.noiseKeywordIds]
   );
 
-  // ✅ Status map drives ALL tile visuals (pre-check + post-check)
   const statusById: Record<string, KeywordStatus> = useMemo(() => {
     const map: Record<string, KeywordStatus> = {};
 
-    // default everything off
     for (const kw of q.keywords) map[kw.id] = "off";
 
     const selected = new Set(selectedIds);
     const required = new Set(q.requiredKeywordIds);
 
     if (!showResult) {
-      // pre-check: selected = blue
       for (const id of selected) map[id] = "selected";
       return map;
     }
 
-    // post-check:
-    // required -> correct if selected, missed if not
     for (const id of required) {
       map[id] = selected.has(id) ? "correct" : "missed";
     }
 
-    // anything selected that is not required -> wrong
     for (const id of selected) {
       if (!required.has(id)) map[id] = "wrong";
     }
@@ -75,13 +83,16 @@ export default function PlayLevel() {
   function next() {
     setShowResult(false);
     setSelectedIds([]);
-    setQIndex((i) => Math.min(i + 1, pack.questions.length - 1));
+    setQIndex((i) => Math.min(i + 1, (pack?.questions.length ?? 1) - 1));
+
   }
 
   const correctAnswer =
     q.answers.find((a) => a.id === q.correctAnswerId)?.text ?? "";
 
-  const pickedWrong = showResult && selectedIds.some((id) => statusById[id] === "wrong");
+  const pickedWrong =
+    showResult && selectedIds.some((id) => statusById[id] === "wrong");
+
   const allRequiredSelected =
     showResult && q.requiredKeywordIds.every((id) => statusById[id] === "correct");
 
@@ -99,6 +110,9 @@ export default function PlayLevel() {
           <div>
             <h1 className="text-2xl font-semibold">Level 1: Find the Signal</h1>
             <p className="text-sm text-[var(--ctn-muted)]">{pack.title}</p>
+
+            {/* optional: show pack id for debugging */}
+            {/* <div className="mt-1 text-xs text-[var(--ctn-dim)]">pack: {pack.id}</div> */}
           </div>
 
           <div className="rounded-2xl border border-[var(--ctn-border)] bg-[var(--ctn-surface)] px-4 py-3 text-sm">
