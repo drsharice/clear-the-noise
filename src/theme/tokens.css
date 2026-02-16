@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+/* Clear the Noise — Fabric-inspired theme */
+:root {
+  /* surfaces */
+  --ctn-bg: #070812;
+  --ctn-surface: rgba(255,255,255,0.06);
+  --ctn-surface-2: rgba(255,255,255,0.09);
+  --ctn-border: rgba(255,255,255,0.10);
+
+  /* Fabric-ish accents (purple/blue/cyan) */
+  --ctn-accent: #7c3aed;     /* purple */
+  --ctn-accent-2: #2563eb;   /* blue */
+  --ctn-accent-3: #06b6d4;   /* cyan */
+
+  /* success */
+  --ctn-good: #22c55e;       /* green */
+  --ctn-good-bg: rgba(34,197,94,0.16);
+
+  /* text */
+  --ctn-text: rgba(255,255,255,0.92);
+  --ctn-muted: rgba(255,255,255,0.70);
+  --ctn-dim: rgba(255,255,255,0.55);
+
+  /* glow */
+  --ctn-glow: rgba(124,58,237,0.22);
+}

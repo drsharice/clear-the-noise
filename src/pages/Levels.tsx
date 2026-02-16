@@ -9,45 +9,56 @@ export default function Levels() {
   if (!cert || !cert.enabled) return <Navigate to="/" replace />;
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white">
+    <div className="min-h-screen bg-[var(--ctn-bg)] text-[var(--ctn-text)]">
       <header className="mx-auto max-w-5xl px-6 pt-10 pb-6">
-        <Link to={`/cert/${cert.id}`} className="text-sm text-zinc-300 hover:text-white">
+        <Link
+          to={`/cert/${cert.id}`}
+          className="text-sm text-[var(--ctn-muted)] hover:text-white"
+        >
           ← Back to {cert.label}
         </Link>
 
         <h1 className="mt-3 text-3xl font-semibold">Levels</h1>
-        <p className="mt-1 text-zinc-300">
-          Next: Level 1 (Find the Signal) + Level 2 (Eliminate Distractors)
+        <p className="mt-1 text-[var(--ctn-muted)]">
+          Train your eye to identify signal words and eliminate distractors.
         </p>
       </header>
 
       <main className="mx-auto max-w-5xl px-6 pb-16">
         <div className="grid gap-4 md:grid-cols-2">
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-            <div className="text-lg font-semibold">Level 1</div>
-            <div className="mt-2 text-sm text-zinc-300">
-              Question + correct answer shown. Tap only the signal words that justify it.
+
+          {/* LEVEL 1 */}
+          <div className="rounded-3xl border border-[var(--ctn-border)] bg-[var(--ctn-surface)] p-6">
+            <div className="text-lg font-semibold">Level 1: Find the Signal</div>
+
+            <div className="mt-2 text-sm text-[var(--ctn-muted)]">
+              The correct answer is shown. Select only the keywords that justify it.
             </div>
+
+            <Link
+              to={`/cert/${cert.id}/play`}
+              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(135deg,var(--ctn-accent),var(--ctn-accent-2))] px-4 py-3 text-sm font-semibold text-white hover:opacity-90"
+            >
+              Start Level 1
+            </Link>
+          </div>
+
+          {/* LEVEL 2 (future-ready) */}
+          <div className="rounded-3xl border border-[var(--ctn-border)] bg-[var(--ctn-surface)] p-6">
+            <div className="text-lg font-semibold">Level 2: Eliminate Distractors</div>
+
+            <div className="mt-2 text-sm text-[var(--ctn-muted)]">
+              Identify keywords that support the correct answer and eliminate incorrect options.
+            </div>
+
             <button
               disabled
-              className="mt-5 w-full rounded-2xl bg-red-600/40 px-4 py-3 text-sm font-semibold text-white/80"
+              className="mt-5 w-full rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold text-[var(--ctn-muted)]"
             >
-              Build next
+              Unlock After Level 1
             </button>
           </div>
 
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-            <div className="text-lg font-semibold">Level 2</div>
-            <div className="mt-2 text-sm text-zinc-300">
-              Tap keywords that support the correct answer and kill distractors.
-            </div>
-            <button
-              disabled
-              className="mt-5 w-full rounded-2xl bg-yellow-400/30 px-4 py-3 text-sm font-semibold text-white/80"
-            >
-              Build next
-            </button>
-          </div>
         </div>
       </main>
     </div>
